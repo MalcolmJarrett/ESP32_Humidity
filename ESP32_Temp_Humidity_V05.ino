@@ -1,6 +1,7 @@
 /*
    Audit Trail
 
+   V05    mrj Added monitoring of Vcc voltage and FTP download/upload service
    V04    mrj Add FTP Option
 
 
@@ -41,8 +42,6 @@ String myStatus = "";
 
 //SPFIFS
 #include "SPIFFS.h"
-///////////////////////////////////////////#include <FS.h>   //Include File System Headers
-
 const char* filename = "/data.csv"; //we'll stick with one filename for the moment
 
 //Add DHT library for sensor
@@ -120,7 +119,7 @@ void setup()
 
 
   pinMode(DHTPOWER, OUTPUT);  //power the DHT22 from an I/O to stop constant power drain
-  pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(LED_BUILTIN, OUTPUT); //just use the built-in
 
  
   /*
@@ -159,14 +158,12 @@ void loop()
   readDHT();
   writeThingspeak();
   WriteToFile();
-  //dumpFile();
-
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
   //switch everything off
-  digitalWrite(LEDPIN, HIGH);   // turn the LED on
+  digitalWrite(LEDPIN, HIGH);   // turn the LED off
   digitalWrite(LED_BUILTIN, LOW); //on board LED
-  digitalWrite(DHTPOWER, LOW);   // turn the DHT22 on
+  digitalWrite(DHTPOWER, LOW);   // turn the DHT22 off
   esp_deep_sleep_start();
 }
 
@@ -258,8 +255,6 @@ void readDHT()
   Serial.println(dewpoint);
   Serial.print("Dewpoint margin=");
   Serial.println(margin);
-  //Serial.print("Temperature=");
-  //Serial.println(temp);
 }
 
 void writeThingspeak()
@@ -294,20 +289,7 @@ void WriteToFile()
   //let's see how the file system is doing and bang out some data
   //File System Parameters
 
-  /*
-    FSInfo fs_info;
-    SPIFFS.info(fs_info);
-    totalFileSpace = (fs_info.totalBytes);
-    usedFileSpace = (fs_info.usedBytes);
-    SPIFFS.info(fs_info);
-    Serial.print("Total FS space ");
-    Serial.println(totalFileSpace);
-    Serial.print("Used FS space ");
-    Serial.println(usedFileSpace);
-    freeSpace = totalFileSpace - usedFileSpace;
-    Serial.print("Free FS space ");
-    Serial.println(freeSpace);//Open for appending data
-  */
+ 
   File f = SPIFFS.open(filename, "a+");
   if (!f)
   {
@@ -418,10 +400,10 @@ void StartUp(void)
     switch (menuchar)
     {
       case 'C':
-        Serial.println("Continue");
+        Serial.println("Continue"); //the easy option, go and log data
         menucount = 0; //force break from while
         break;
-      case 'R':
+      case 'R':   //empty the file
         clearScreen;
         Serial.println("Reset");
         Serial.print("To delete file please key in this number: ");
@@ -453,8 +435,6 @@ void StartUp(void)
             break; //there's data, stop looping
           }
           readLoopCount--; //dec the loop count
-          //Serial.print("Waiting, loop count is ");
-          //Serial.println (readLoopCount);
           delay (1000);//give the punter some time
         }
         recvWithEndMarker();
@@ -474,12 +454,12 @@ void StartUp(void)
         }
         menucount = 0; //force break from while
         break;
-      case 'D':
+      case 'D': //dump the file up the serial port
         menucount = 0; //force break from while
         Serial.println("Dump");
         dumpFile();
         break;
-      case 'F':
+      case 'F':   //act as an FTP server
         menucount = 0; //force break from while
         Serial.println("Start FTP server, reset to quit FTP");
         FTPFile();
